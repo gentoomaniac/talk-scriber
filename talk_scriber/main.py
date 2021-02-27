@@ -3,16 +3,19 @@
 
 import datetime
 import logging
+import os
 import sys
 
 import click
+import requests
 
+from pyyoutube import Api
 from youtube_transcript_api import YouTubeTranscriptApi
 
 log = logging.getLogger(__file__)
 
 
-def _configure_logging(verbosity):
+def _configure_logging(verbosity: int):
     loglevel = max(3 - verbosity, 0) * 10
     logging.basicConfig(level=loglevel, format='[%(asctime)s] %(levelname)s: %(message)s', datefmt='%Y-%m-%d %H:%M:%S')
     if loglevel >= logging.DEBUG:
@@ -21,7 +24,7 @@ def _configure_logging(verbosity):
             logging.getLogger(loggername).setLevel(logging.CRITICAL)
 
 
-def get_caption_markdown(video_id):
+def get_caption_markdown(video_id: str):
     captions = YouTubeTranscriptApi.get_transcript(video_id)
     return [
         "[{time}](https://youtu.be/{id}?t={seconds}) {text}\n".format(time=str(
@@ -32,10 +35,42 @@ def get_caption_markdown(video_id):
     ]
 
 
-def get_metadata_markdown(video_id):
-    # https://i1.ytimg.com/vi/fE2KDzZaxvE/hqdefault.jpg
-    # https://i1.ytimg.com/vi/fE2KDzZaxvE/maxresdefault.jpg
-    pass
+def get_preview_image(img_url: str, video_id: str, img_path: str = 'img'):
+    img_file_name = os.path.join(img_path, video_id) + '.jpg'
+    with open(img_file_name, 'wb') as handle:
+        response = requests.get(img_url, stream=True)
+
+        if not response.ok:
+            log.warning("Couldn't fetch preview: %s", response)
+            return None
+
+        for block in response.iter_content(1024):
+            if not block:
+                break
+            handle.write(block)
+
+        return img_file_name
+
+    return None
+
+
+def gen_markdown_page(video_id: str, title: str, image_path: str, description: str, date: datetime, captions: list):
+    markdown = ""
+
+    markdown += "# {title} ({date})\n\n".format(title=title, date=date.strftime("%Y-%m-%d"))
+    markdown += "![alt {title}]({img_path} \"{title}\")\n\n".format(title=title, img_path=image_path)
+    markdown += "## Description\n\n"
+    markdown += description.strip()
+    markdown += "\n\n"
+    markdown += "## Transcript\n\n"
+    for c in captions:
+        markdown += "[{time}](https://youtu.be/{id}?t={seconds}) {text}  \n".format(time=str(
+            datetime.timedelta(seconds=int(c['start']))),
+                                                                                    seconds=int(c['start']),
+                                                                                    id=video_id,
+                                                                                    text=c["text"])
+
+    return markdown
 
 
 @click.group()
@@ -47,9 +82,31 @@ def cli(verbosity: int):
 
 @cli.command(name='scribe')
 @click.option('-i', '--video-id', help='id of the youtube video', required=True)
-def scribe(video_id: str):
+@click.option('-k', '--youtube-api-key', help='youtube api key', default=os.getenv('YOUTUBE_API_KEY'))
+def scribe(video_id: str, youtube_api_key: str):
 
-    captions = get_caption_markdown(video_id)
+    if not youtube_api_key:
+        log.error('You need to provide an API key either by --youtube-api0key or by setting YOUTUBE_API_KEY')
+        sys.exit(1)
+
+    api = Api(api_key=youtube_api_key)
+    video_metadata = api.get_video_by_id(video_id=video_id).items[0]
+
+    #log.debug(json.dumps(video_metadata.to_dict(), sort_keys=True, indent=2))
+
+    title = video_metadata.snippet.title
+    preview_image_path = get_preview_image(img_url=video_metadata.snippet.thumbnails.default.url, video_id=video_id)
+    description = video_metadata.snippet.description
+    date = datetime.datetime.strptime(video_metadata.snippet.publishedAt, "%Y-%m-%dT%H:%M:%S%z")
+    captions = YouTubeTranscriptApi.get_transcript(video_id)
+
+    print(
+        gen_markdown_page(video_id=video_id,
+                          title=title,
+                          image_path=preview_image_path,
+                          description=description,
+                          date=date,
+                          captions=captions))
 
 
 if __name__ == '__main__':

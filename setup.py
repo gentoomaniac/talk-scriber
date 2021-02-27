@@ -19,9 +19,7 @@ VERSION = None
 LICENSE = 'MIT'
 EXCLUDE_FROM_PACKAGES = []
 PACKAGE_DATA = []
-REQUIRED = [
-    'click', 'youtube_transcript_api'
-]
+REQUIRED = ['click', 'requests', 'youtube_transcript_api']
 
 EXTRAS = {}
 
@@ -43,8 +41,6 @@ setup(
     package_data={'': PACKAGE_DATA},
     license=LICENSE,
     entry_points={
-        'console_scripts': [
-            'talk-scriber = talk_scriber.main:cli',
-        ],
+        'console_scripts': ['talk-scriber = talk_scriber.main:cli',],
     },
 )
