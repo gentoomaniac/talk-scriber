@@ -19,7 +19,7 @@ VERSION = None
 LICENSE = 'MIT'
 EXCLUDE_FROM_PACKAGES = []
 PACKAGE_DATA = []
-REQUIRED = ['click', 'requests', 'youtube_transcript_api']
+REQUIRED = ['click', ' python-youtube', 'requests', 'youtube_transcript_api']
 
 EXTRAS = {}
 
