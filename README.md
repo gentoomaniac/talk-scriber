@@ -13,7 +13,7 @@ pip install git+https://github.com/gentoomaniac/talk-scriber
 Get your [Youtube API token](https://developers.google.com/youtube/v3/getting-started)
 
 ```bash
-export YOUTUBE_API_TOKEN=secretapitoken
+export YOUTUBE_API_KEY=secretapitoken
 
 # the video ID can be extracted from teh video URL, the v= parameter
 talk-scriber scribe --video-id youtube_id > transcript.md
