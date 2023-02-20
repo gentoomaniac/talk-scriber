@@ -1,4 +1,0 @@
-click
-python-youtube
-requests
-youtube_transcript_api

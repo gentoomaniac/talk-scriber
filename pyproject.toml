@@ -1,0 +1,20 @@
+[project]
+name = "talk-scriber"
+description = "download caption files as markdown from youtube"
+version = "0.0.1"
+authors = [
+    { name = "Marco Siebecke", email = "marco@siebecke.se" }
+]
+dependencies = [
+    "click",
+    "python-youtube",
+    "requests",
+    "youtube_transcript_api"
+]
+
+[project.scripts]
+talk-scriber = "talk_scriber.main:cli"
+
+[project.urls]
+"Homepage" = "https://github.com/gentoomaniac/talk-scriber"
+"Bug Tracker" = "https://github.com/gentoomaniac/talk-scriber/issues"
