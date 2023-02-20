@@ -24,17 +24,6 @@ def _configure_logging(verbosity: int):
             logging.getLogger(loggername).setLevel(logging.CRITICAL)
 
 
-def get_caption_markdown(video_id: str):
-    captions = YouTubeTranscriptApi.get_transcript(video_id)
-    return [
-        "[{time}](https://youtu.be/{id}?t={seconds}) {text}\n".format(time=str(
-            datetime.timedelta(seconds=int(c['start']))),
-                                                                      seconds=int(c['start']),
-                                                                      id=video_id,
-                                                                      text=c["text"]) for c in captions
-    ]
-
-
 def get_preview_image(img_url: str, video_id: str, img_path: str = 'img'):
     img_file_name = os.path.join(img_path, video_id) + '.jpg'
     with open(img_file_name, 'wb') as handle:
