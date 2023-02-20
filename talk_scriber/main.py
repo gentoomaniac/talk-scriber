@@ -62,6 +62,31 @@ def gen_markdown_page(video_id: str, title: str, image_path: str, description: s
     return markdown
 
 
+def gen_srt(captions: list) -> list:
+    srt = []
+
+    captions = [{
+        'text': c['text'],
+        'start': datetime.timedelta(seconds=c['start']),
+        'end': datetime.timedelta(seconds=c['start']) + datetime.timedelta(seconds=c['duration'])
+    } for c in captions]
+
+    for i in range(len(captions)):
+        if i < len(captions) - 1:
+            if captions[i]['end'] > captions[i + 1]['start']:
+                captions[i]['end'] = captions[i + 1]['start'] - datetime.timedelta(seconds=0.001)
+        srt.append(gen_srt_frame(caption=captions[i]))
+
+    return srt
+
+
+def gen_srt_frame(caption: dict) -> dict:
+    return {
+        'timing': "{start} --> {end}".format(start=str(caption['start'])[:-3], end=str(caption['end'])[:-3]),
+        'text': caption['text']
+    }
+
+
 @click.group()
 @click.option('-v', '--verbosity', help='Verbosity', default=0, count=True)
 def cli(verbosity: int):
@@ -87,7 +112,7 @@ def scribe(video_id: str, youtube_api_key: str):
     preview_image_path = get_preview_image(img_url=video_metadata.snippet.thumbnails.default.url, video_id=video_id)
     description = video_metadata.snippet.description
     date = datetime.datetime.strptime(video_metadata.snippet.publishedAt, "%Y-%m-%dT%H:%M:%S%z")
-    captions = YouTubeTranscriptApi.get_transcript(video_id)
+    captions = YouTubeTranscriptApi.get_transcript(video_id, languages=['en', 'de'])
 
     print(
         gen_markdown_page(video_id=video_id,
@@ -96,6 +121,27 @@ def scribe(video_id: str, youtube_api_key: str):
                           description=description,
                           date=date,
                           captions=captions))
+
+
+@cli.command(name='srt')
+@click.option('-i', '--video-id', help='id of the youtube video', required=True)
+@click.option('-k', '--youtube-api-key', help='youtube api key', default=os.getenv('YOUTUBE_API_KEY'))
+def scribe(video_id: str, youtube_api_key: str):
+
+    if not youtube_api_key:
+        log.error('You need to provide an API key either by --youtube-api0key or by setting YOUTUBE_API_KEY')
+        sys.exit(1)
+
+    api = Api(api_key=youtube_api_key)
+
+    captions = YouTubeTranscriptApi.get_transcript(video_id, languages=['en', 'de'])
+
+    srt_frames = gen_srt(captions=captions)
+    for i in range(len(srt_frames)):
+        print("""{frame_index}
+{timing}
+{text}
+        """.format(frame_index=i, timing=srt_frames[i]['timing'], text=srt_frames[i]['text']))
 
 
 if __name__ == '__main__':
